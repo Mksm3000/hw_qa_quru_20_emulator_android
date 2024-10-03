@@ -1,0 +1,1 @@
+# hw_qa_quru_20_emulator_android
