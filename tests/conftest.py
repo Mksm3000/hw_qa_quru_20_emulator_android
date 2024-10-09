@@ -1,64 +1,53 @@
-import os
-
 import allure
 import allure_commons
 import pytest
 from appium import webdriver
-from appium.options.android import UiAutomator2Options
 from dotenv import load_dotenv
 from selene import browser, support
 
 import config
-import utils.file
 from utils.attach import png_attachment, xml_attachment, video_attachment
 
 
-@pytest.fixture(scope='session', autouse=True)
+def pytest_addoption(parser):
+    parser.addoption(
+        "--context",
+        default="bstack",
+        help="Specify the test context"
+    )
+
+
+def pytest_configure(config):
+    context = config.getoption("--context")
+    env_file_path = f".env.{context}"
+
+    load_dotenv(dotenv_path=env_file_path)
+
+
+@pytest.fixture
+def context(request):
+    return request.config.getoption("--context")
+
+
+@pytest.fixture(autouse=True)
 def load_env():
     load_dotenv()
 
 
 @pytest.fixture(scope='function', autouse=True)
-def mobile_management():
-    options = UiAutomator2Options()
+def mobile_management(context):
+    options = config.to_driver_options(context=context)
 
-    if config.deviceName:
-        options.set_capability('deviceName', config.deviceName)
-
-    if config.appWaitActivity:
-        options.set_capability('appWaitActivity', config.appWaitActivity)
-
-    options.set_capability('app',
-                           config.app if
-                           (config.app.startswith(
-                               '/') or config.runs_on_bstack) else
-                           utils.file.abs_path_from_project(config.app))
-
-    if config.runs_on_bstack:
-        options.load_capabilities({
-            'bstack:options': {
-                'projectName': 'First Python project',
-                'buildName': 'browserstack-build-1',
-                'sessionName': 'BStack first_test',
-                'platformVersion': os.getenv('platformVersion'),
-                'userName': os.getenv('BS_NAME'),
-                'accessKey': os.getenv('BS_KEY')
-            }
-        })
-
-    with allure.step('init app session'):
-        browser.config.driver = webdriver.Remote(config.remote_url,
-                                                 options=options)
-
-    browser.config.timeout = float(os.getenv('timeout', '10.0'))
+    browser.config.driver = webdriver.Remote(command_executor=options.get_capability('remote_url'),
+                                             options=options)
+    browser.config.timeout = 30.0
 
     browser.config._wait_decorator = support._logging.wait_with(
         context=allure_commons._allure.StepContext)
 
-    yield
+    yield browser
 
     png_attachment(browser)
-
     xml_attachment(browser)
 
     session_id = browser.driver.session_id
@@ -66,5 +55,5 @@ def mobile_management():
     with allure.step('tear down app session'):
         browser.quit()
 
-    if config.runs_on_bstack:
+    if context == 'bstack':
         video_attachment(session_id)

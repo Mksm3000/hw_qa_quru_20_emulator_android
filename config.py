@@ -1,15 +1,34 @@
 import os
 
-# context = os.getenv('context', 'bstack')
-# run_on_bstack = os.getenv('run_on_bstack', 'false').lower() == 'true'
-# 'app': 'bs://77e1f3856082cb9f61564781fdb95d123840f38c'
+from appium.options.android import UiAutomator2Options
 
-remote_url = os.getenv('remote_url', 'http://127.0.0.1:4723/wd/hub')
-deviceName = os.getenv('deviceName')
-deviceUdid = os.getenv('deviceUdid', 'emulator-5554')
-platformVersion = os.getenv('platformVersion', '9.0')
-appWaitActivity = os.getenv('appWaitActivity', 'org.wikipedia.*')
-app = os.getenv('app', './resources/org.wikipedia--50479.apk')
-runs_on_bstack = app.startswith('bs://')
-if runs_on_bstack:
-    remote_url = 'http://hub.browserstack.com/wd/hub'
+from utils import file
+
+
+def to_driver_options(context):
+    options = UiAutomator2Options()
+
+    if context == 'local_emulator':
+        options.set_capability('remote_url', os.getenv('REMOTE_URL'))
+        options.set_capability('deviceName', os.getenv('DEVICE_NAME'))
+        options.set_capability('appWaitActivity', os.getenv('APP_WAIT_ACTIVITY'))
+        options.set_capability('app', file.abs_path_from_project(os.getenv('APP')))
+
+    if context == 'bstack':
+        options.set_capability('remote_url', os.getenv('REMOTE_URL'))
+        options.set_capability('deviceName', os.getenv('DEVICE_NAME'))
+        options.set_capability('platformName', os.getenv('PLATFORM_NAME'))
+        options.set_capability('platformVersion', os.getenv('PLATFORM_VERSION'))
+        options.set_capability('appWaitActivity', os.getenv('APP_WAIT_ACTIVITY'))
+        options.set_capability('app', os.getenv('APP'))
+        options.set_capability(
+            'bstack:options', {
+                'projectName': 'Wikipedia project',
+                'buildName': 'browserstack-build-1',
+                'sessionName': 'BStack test',
+                'userName': os.getenv('BS_NAME'),
+                'accessKey': os.getenv('BS_KEY'),
+            },
+        )
+
+    return options
