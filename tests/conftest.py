@@ -5,7 +5,7 @@ from appium import webdriver
 from dotenv import load_dotenv
 from selene import browser, support
 
-import config
+import config as app_config
 from utils.attach import png_attachment, xml_attachment, video_attachment
 
 
@@ -36,7 +36,7 @@ def load_env():
 
 @pytest.fixture(scope='function', autouse=True)
 def mobile_management(context):
-    options = config.to_driver_options(context=context)
+    options = app_config.to_driver_options(context=context)
 
     browser.config.driver = webdriver.Remote(command_executor=options.get_capability('remote_url'),
                                              options=options)
